@@ -9,7 +9,8 @@ import {
   Image,
   Modal,
   FlatList,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import CheckBox from '@react-native-community/checkbox';
 import { Picker } from '@react-native-picker/picker';
@@ -72,6 +73,10 @@ const RegisterScreen = ({ navigation }) => {
     vatNumber: ''
   });
 
+  // Validation state
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [showPasswordError, setShowPasswordError] = useState(true);
+
   const [languageInput, setLanguageInput] = useState('');
   const [showLanguageModal, setShowLanguageModal] = useState(false);
 
@@ -81,6 +86,72 @@ const RegisterScreen = ({ navigation }) => {
       ...formData,
       [name]: value
     });
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
+    }
+    
+    // Password validation
+    if (name === 'password') {
+      validatePassword(value);
+    }
+  };
+
+  // Password validation
+  const validatePassword = (password: string) => {
+    const hasMinLength = password.length >= 8;
+    const hasCapitalLetter = /[A-Z]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    const isValid = hasMinLength && hasCapitalLetter && hasSpecialChar && hasNumber;
+    
+    if (!isValid && password.length > 0) {
+      setShowPasswordError(true);
+    } else {
+      setShowPasswordError(false);
+    }
+    
+    return isValid;
+  };
+
+  // Validate step 1
+  const validateStep1 = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (!validatePassword(formData.password)) {
+      newErrors.password = 'Password does not meet requirements';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle next step
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setCurrentStep(2);
+    }
   };
 
   // Handle qualification changes
@@ -132,101 +203,232 @@ const RegisterScreen = ({ navigation }) => {
 
   // Render step 1 - Basic Info
   const renderStep1 = () => (
-    <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Create Your Account</Text>
-      
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>First Name *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.firstName}
-          onChangeText={(text) => handleChange('firstName', text)}
-          placeholder="Enter first name"
+    <ScrollView contentContainerStyle={styles.step1Container}>
+      {/* Header with Logo */}
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
+        <Image 
+          source={require('../../assets/images/logo.png')} 
+          style={styles.labourBaseLogo}
+          resizeMode="contain"
         />
+        </View>
+        <View style={styles.geometricShape} >
+          <Image 
+          source={require('../../assets/images/icon.png')} 
+          style={styles.iconbg}
+          resizeMode="contain"
+        />
+        </View>
       </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Last Name *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.lastName}
-          onChangeText={(text) => handleChange('lastName', text)}
-          placeholder="Enter last name"
-        />
-      </View>
+      {/* Main Content */}
+      <View style={styles.mainContent}>
+        <Text style={styles.mainTitle}>Sign up to get started</Text>
+        <Text style={styles.subtitle}>Fill in your details.</Text>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Email *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.email}
-          onChangeText={(text) => handleChange('email', text)}
-          placeholder="Enter email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
+        {/* Form Fields */}
+        <View style={styles.formFields}>
+          {/* First Name and Last Name in one row */}
+          <View style={styles.nameRow}>
+            <View style={styles.nameField}>
+              <TextInput
+                style={[styles.input, errors.firstName && styles.inputError]}
+                value={formData.firstName}
+                onChangeText={(text) => handleChange('firstName', text)}
+                placeholder="First Name"
+              />
+              {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+            </View>
+            <View style={styles.nameFieldLast}>
+              <TextInput
+                style={[styles.input, errors.lastName && styles.inputError]}
+                value={formData.lastName}
+                onChangeText={(text) => handleChange('lastName', text)}
+                placeholder="Last Name"
+              />
+              {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
+            </View>
+          </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Password *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.password}
-          onChangeText={(text) => handleChange('password', text)}
-          placeholder="Create password (min 8 characters)"
-          secureTextEntry
-        />
-      </View>
+          {/* Email */}
+          <View style={styles.inputGroup}>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              value={formData.email}
+              onChangeText={(text) => handleChange('email', text)}
+              placeholder="Email Address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Confirm Password *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.confirmPassword}
-          onChangeText={(text) => handleChange('confirmPassword', text)}
-          placeholder="Confirm password"
-          secureTextEntry
-        />
-      </View>
+          {/* Password */}
+          <View style={styles.inputGroup}>
+            <TextInput
+              style={[styles.input, errors.password && styles.inputError]}
+              value={formData.password}
+              onChangeText={(text) => handleChange('password', text)}
+              placeholder="Password"
+              secureTextEntry
+            />
+            {showPasswordError && (
+              <Text style={styles.passwordErrorText}>
+                Password must be at least 8 characters long and contain a capital letter, special character and a number.
+              </Text>
+            )}
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+          </View>
+        </View>
 
-      <TouchableOpacity 
-        style={styles.primaryButton}
-        onPress={() => setCurrentStep(2)}
-      >
-        <Text style={styles.buttonText}>Continue</Text>
-      </TouchableOpacity>
+        {/* Buttons in one row */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.inviteButton}>
+            <Text style={styles.inviteButtonText}>Join via invite</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.signUpButton}
+            onPress={handleNextStep}
+          >
+            <Text style={styles.signUpButtonText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Login Link */}
+        <TouchableOpacity style={styles.loginLink}>
+          <Text style={styles.loginLinkText}>Already have an account? Log In</Text>
+        </TouchableOpacity>
+
+        {/* Footer Section */}
+        <View style={styles.footerSection}>
+          <Text style={styles.footerText}>
+            Create your NIXCI Profile for access to
+          </Text>
+          
+          {/* LabourBase Logo */}
+          <View style={styles.labourBaseContainer}>
+            
+            <Image 
+          source={require('../../assets/images/labour-logo.png')} 
+          style={styles.labourBaseLogo}
+          resizeMode="contain"
+        />
+          </View>
+          
+          {/* Partner Logos */}
+          <View style={styles.partnersSection}>
+            <Text style={styles.partnersText}>Working with</Text>
+            <View style={styles.partnerLogos}>
+              <Text style={styles.partnerLogo}>
+                <MaterialIcons name="user" size={20} color="#007AFF" />
+              </Text>
+              <Text style={styles.partnerLogo}>
+              <MaterialIcons name="user" size={20} color="#007AFF" />
+              </Text>
+              <Text style={styles.partnerLogo}>
+              <MaterialIcons name="user" size={20} color="#007AFF" />
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 
   // Render step 2 - Account Type
   const renderStep2 = () => (
-    <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Are you a company or individual?</Text>
-      
-      <TouchableOpacity 
-        style={[styles.accountTypeCard, formData.accountType === 'soleTrader' && styles.selectedAccountType]}
-        onPress={() => handleChange('accountType', 'soleTrader')}
-      >
-        <Text style={styles.accountTypeTitle}>Sole Trader</Text>
-        <Text style={styles.accountTypeDescription}>I work for myself as an independent contractor</Text>
-      </TouchableOpacity>
+    <ScrollView contentContainerStyle={styles.step2Container}>
+      {/* Header */}
+      <View style={styles.step2Header}>
+        <View style={styles.step2Logo}>
+          <Image source={require('../../assets/images/icon.png')} style={styles.arrowForward} />
+        </View>
+        <Text style={styles.step2Title}>Are you a company or an individual?</Text>
+        <Text style={styles.step2Subtitle}>Select your profile type</Text>
+      </View>
 
-      <TouchableOpacity 
-        style={[styles.accountTypeCard, formData.accountType === 'company' && styles.selectedAccountType]}
-        onPress={() => handleChange('accountType', 'company')}
-      >
-        <Text style={styles.accountTypeTitle}>Company</Text>
-        <Text style={styles.accountTypeDescription}>I represent a business looking for workers</Text>
-      </TouchableOpacity>
+      {/* Selection Options */}
+      <View style={styles.selectionContainer}>
+        {/* Option 1: Sole Trader / Jobseeker */}
+        <View style={styles.selectionCardwrapper}>
+        <TouchableOpacity 
+          style={[styles.selectionCard, formData.accountType === 'soleTrader' && styles.selectedCard]}
+          onPress={() => handleChange('accountType', 'soleTrader')}
+        >
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, formData.accountType === 'soleTrader' && styles.selectedCardTitle]}>
+              I am a sole trader / Jobseeker
+            </Text>
+            <View style={styles.cardImage}>
+            <Image source={require('../../assets/images/labour.png')} style={styles.cardImage} />
+            </View>
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.cardDescription}>
+          You are self employed and want to register for access to the Labourbase job market place
+        </Text>
+        </View>
+        {/* Option 2: Company / Work for a company */}
+        <View style={styles.selectionCardwrapper}>
+        <TouchableOpacity 
+          style={[styles.selectionCard, formData.accountType === 'company' && styles.selectedCard]}
+          onPress={() => handleChange('accountType', 'company')}
+        >
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, formData.accountType === 'company' && styles.selectedCardTitle]}>
+              I am a Company / Work for a company
+            </Text>
+            <View style={styles.cardImage}>
+              <Image source={require('../../assets/images/labour.png')} style={styles.cardImage} />
+            </View>
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.cardDescription}>
+          You want to make use of the NIXCI project and site management services.
+        </Text>
+        </View>
+        {/* Option 3: Seeking access to existing site */}
+        <View style={styles.selectionCardwrapper}>
+        <TouchableOpacity 
+          style={[styles.selectionCard, formData.accountType === 'siteAccess' && styles.selectedCard]}
+          onPress={() => handleChange('accountType', 'siteAccess')}
+        >
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, formData.accountType === 'siteAccess' && styles.selectedCardTitle]}>
+              I am seeking access to an existing site
+            </Text>
+            <View style={styles.cardImage}>
+            <Image source={require('../../assets/images/labour.png')} style={styles.cardImage} />
+            </View>
+          </View>
+        </TouchableOpacity>
+        
+        <Text style={styles.cardDescription}>
+          You'll need access to NIXCI to sign in and out of sites, as well as managing site documents such as RAMS, RFI's and CVI's.
+        </Text>
+        <Text style={styles.blueText}>
+          *Only to be used by self employed sole traders, if you work for a company use option 2
+        </Text>
+        </View>
+      </View>
 
-      <TouchableOpacity 
-        style={[styles.accountTypeCard, formData.accountType === 'worker' && styles.selectedAccountType]}
-        onPress={() => handleChange('accountType', 'worker')}
-      >
-        <Text style={styles.accountTypeTitle}>Worker for Company</Text>
-        <Text style={styles.accountTypeDescription}>I'm looking for work opportunities</Text>
-      </TouchableOpacity>
+      {/* Footer Section */}
+      <View style={styles.footerSectionN}>
+        <Text style={styles.footerText}>
+          Create your NIXCI Profile for access to
+        </Text>
+        <View style={styles.labourBaseContainer}>
+        <Image 
+          source={require('../../assets/images/labour-logo.png')} 
+          style={styles.labourBaseLogo}
+          resizeMode="contain"
+        />
+        </View>
+      </View>
 
+      {/* Navigation Buttons */}
       <View style={styles.buttonRow}>
         <TouchableOpacity 
           style={styles.secondaryButton}
@@ -249,12 +451,17 @@ const RegisterScreen = ({ navigation }) => {
   // Render step 3 - Personal Details
   const renderStep3 = () => (
     <ScrollView contentContainerStyle={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Personal Information</Text>
+      <View style={styles.StepheaderIcon}>
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerIcon} />
+        <Image source={require('../../assets/images/labour-logo.png')} style={styles.headerIcon2} />
+      </View>
+      <Text style={styles.stepNumber}>Step 1</Text>
+      <Text style={styles.stepTitle}>Add your personal details</Text>
       
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton}>
-          <MaterialIcons  name="add-a-photo" size={30} color="#555" />
-          <Text style={styles.uploadText}>Upload Profile Photo</Text>
+          <MaterialIcons  name="cloud-upload" size={30} color="#555" />
+          <Text style={styles.uploadText}>Upload  Photo</Text>
         </TouchableOpacity>
       </View>
 
@@ -419,6 +626,11 @@ const RegisterScreen = ({ navigation }) => {
   // Render step 4 - Qualifications
   const renderStep4 = () => (
     <ScrollView contentContainerStyle={styles.stepContainer}>
+      <View style={styles.StepheaderIcon}>
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerIcon} />
+        <Image source={require('../../assets/images/labour-logo.png')} style={styles.headerIcon2} />
+      </View>
+      <Text style={styles.stepNumber}>Step 2</Text>
       <Text style={styles.stepTitle}>Qualifications</Text>
       
       <View style={styles.checkboxContainer}>
@@ -515,6 +727,11 @@ const RegisterScreen = ({ navigation }) => {
   // Render step 5 - Medical Information
   const renderStep5 = () => (
     <ScrollView contentContainerStyle={styles.stepContainer}>
+      <View style={styles.StepheaderIcon}>
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerIcon} />
+        <Image source={require('../../assets/images/labour-logo.png')} style={styles.headerIcon2} />
+      </View>
+      <Text style={styles.stepNumber}>Step 3</Text>
       <Text style={styles.stepTitle}>Medical Information</Text>
       
       <View style={styles.radioGroupVertical}>
@@ -588,6 +805,11 @@ const RegisterScreen = ({ navigation }) => {
   // Render step 6 - Company Information
   const renderStep6 = () => (
     <ScrollView contentContainerStyle={styles.stepContainer}>
+      <View style={styles.StepheaderIcon}>
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerIcon} />
+        <Image source={require('../../assets/images/labour-logo.png')} style={styles.headerIcon2} />
+      </View>
+      <Text style={styles.stepNumber}>Step 4</Text>
       <Text style={styles.stepTitle}>Company Information</Text>
       
       <View style={styles.formGroup}>
@@ -664,6 +886,11 @@ const RegisterScreen = ({ navigation }) => {
   // Render step 7 - Complete Profile
   const renderStep7 = () => (
     <ScrollView contentContainerStyle={styles.stepContainer}>
+      <View style={styles.StepheaderIcon}>
+        <Image source={require('../../assets/images/logo.png')} style={styles.headerIcon} />
+        <Image source={require('../../assets/images/labour-logo.png')} style={styles.headerIcon2} />
+      </View>
+      <Text style={styles.stepNumber}>Step 5</Text>
       <Text style={styles.stepTitle}>Complete Your Profile</Text>
       
       <View style={styles.uploadContainer}>
@@ -730,17 +957,21 @@ const RegisterScreen = ({ navigation }) => {
   // Main render
   return (
     <View style={styles.container}>
-      {/* Progress Bar */}
-      <View style={styles.progressBarContainer}>
-        <View style={[styles.progressBar, { width: `${(currentStep / 7) * 100}%` }]} />
-      </View>
+      {/* Progress Bar - Only show for steps 2-7 */}
+      {currentStep > 1 && (
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${((currentStep - 1) / 6) * 100}%` }]} />
+        </View>
+      )}
 
-      {/* Step Indicator */}
-      <View style={styles.stepIndicator}>
-        <Text style={styles.stepText}>Step {currentStep} of 7</Text>
-      </View>
-
-      {/* Render current step */}
+      {/*  
+      {currentStep > 1 && (
+        <View style={styles.stepIndicator}>
+          <Text style={styles.stepText}>Step {currentStep - 1} of 6</Text>
+        </View>
+      )}
+    
+      */}
       <View style={styles.contentContainer}>
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
@@ -750,6 +981,7 @@ const RegisterScreen = ({ navigation }) => {
         {currentStep === 6 && renderStep6()}
         {currentStep === 7 && renderStep7()}
       </View>
+     
     </View>
   );
 };
@@ -788,15 +1020,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#333',
+    color: '#214cb6',
+    textAlign:'center'
   },
+  stepNumber:{fontSize:16,fontWeight:'bold',color:'#214cb6',textAlign:'center'},
   formGroup: {
     marginBottom: 15,
   },
   label: {
     marginBottom: 8,
     fontSize: 14,
-    color: '#555',
+    color: '#214cb6',
     fontWeight: '500',
   },
   input: {
@@ -843,7 +1077,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 10,
   },
   disabledButton: {
     opacity: 0.6,
@@ -875,9 +1109,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   uploadButton: {
-    width: 150,
+    width: '100%',
     height: 150,
-    borderRadius: 75,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: '#ddd',
     justifyContent: 'center',
@@ -1046,6 +1280,296 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
   },
+  // New styles for step 1
+  step1Container: {
+    
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    marginBottom: 40,
+  },
+  logoContainer: {
+    flex: 1,
+  },
+  logo: {
+
+    width: 200,
+    height: 200,
+
+    marginBottom: 5,
+  },
+  tagline: {
+    fontSize: 14,
+    color: '#666',
+  },
+  geometricShape: {
+    opacity: 0.1,
+  },
+  mainContent: {
+    paddingHorizontal: 20,
+  },
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 30,
+  },
+  formFields: {
+    marginBottom: 10,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  required: {
+    color: 'red',
+  },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  passwordErrorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 5,
+    lineHeight: 16,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  inviteButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  inviteButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  signUpButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 10,
+  },
+  signUpButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loginLink: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  loginLinkText: {
+    color: '#007AFF',
+    fontSize: 14,
+  },
+  picker: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  // New styles for step 1
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  nameField: {
+    flex: 1,
+    marginRight: 10,
+  },
+  nameFieldLast: {
+    flex: 1,
+  },
+  footerSection: {
+    marginTop: 40,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  footerSectionN: {
+    marginTop: 20,
+    paddingTop: 20,
+    display:'flex',
+    flexDirection:'row',
+    justifyContent:'space-between',
+    alignItems:'center',
+    
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#214cb6',
+    textAlign: 'center',
+    marginBottom: 0,
+  },
+  labourBaseContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0,
+  },
+  labourBaseLogo: {
+    width: 150,
+    height: 50,
+  },
+  partnersSection: {
+    alignItems: 'center',
+    marginBottom:30,
+  },
+  partnersText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  partnerLogos: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  partnerLogo: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  iconbg:{
+    width: 100,
+    height: 100,
+  },
+  // New styles for step 2
+  step2Container: {
+    
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  step2Header: {
+    alignItems: 'center',
+    marginBottom: 40,
+    paddingTop: 20,
+  },
+  step2Logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 80,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  arrowForward:{ width: 40,
+    height: 40,},
+  step2Title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  step2Subtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  selectionContainer: {
+    marginBottom: 0,
+  },
+  selectionCard: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 0,
+    backgroundColor: '#214cb6',
+  },
+  selectedCard: {
+    borderColor: '#007AFF',
+    backgroundColor: '#214cb699',
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    flex: 1,
+  },
+  selectedCardTitle: {
+    color: '#fff',
+  },
+  cardImage: {
+    width: 60,
+    height: 60,
+    paddingLeft:10,
+    borderRadius: 75,
+    backgroundColor: '#007AFF77',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'left',
+    marginTop: 10,
+    lineHeight: 20,
+  },
+  blueText: {
+    fontSize: 12,
+    color: '#214cb6',
+    textAlign: 'left',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  selectionCardwrapper:{padding:10,borderWidth:1,borderColor:'#fafafa',backgroundColor:'#f8f8f8' ,borderRadius:10,marginBottom:20},
+  StepheaderIcon:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:20,paddingTop:20},
+  headerIcon:{width:105,height:35},
+  headerIcon2:{width:115,height:30},
 });
 
 export default RegisterScreen;
